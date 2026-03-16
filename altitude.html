@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0e1a">
+<title>Altitude</title>
+<link rel="manifest" href="manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0a0e1a;
+    --bg-card: #111827;
+    --accent: #38bdf8;
+    --accent-glow: rgba(56, 189, 248, 0.25);
+    --accent-dim: rgba(56, 189, 248, 0.08);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-dim: #475569;
+    --success: #34d399;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --ring: rgba(56, 189, 248, 0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Subtle animated gradient background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 0%, rgba(56, 189, 248, 0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 80% 80%, rgba(99, 102, 241, 0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100dvh;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 36px;
+    opacity: 0;
+    animation: fadeDown 0.6s ease-out 0.1s forwards;
+  }
+
+  .header svg {
+    width: 28px;
+    height: 28px;
+    color: var(--accent);
+    filter: drop-shadow(0 0 6px var(--accent-glow));
+  }
+
+  .header h1 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+  }
+
+  /* Main altitude display */
+  .altitude-ring {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease-out 0.25s forwards;
+  }
+
+  .altitude-ring svg.ring-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .ring-bg {
+    fill: none;
+    stroke: var(--accent-dim);
+    stroke-width: 3;
+  }
+
+  .ring-progress {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-dasharray: 753;
+    stroke-dashoffset: 753;
+    transition: stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    filter: drop-shadow(0 0 8px var(--accent-glow));
+  }
+
+  .altitude-inner {
+    position: absolute;
+    inset: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 40%, #1a2236, var(--bg-deep));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+  }
+
+  .altitude-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 3.2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1;
+    transition: color 0.3s;
+  }
+
+  .altitude-unit {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 300;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .altitude-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease-out 0.4s forwards;
+  }
+
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .stat-label {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .stat-label svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.5;
+  }
+
+  .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.15rem;
+    font-weight: 400;
+    color: var(--text-primary);
+  }
+
+  .stat-sub {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+
+  /* Accuracy indicator */
+  .accuracy-bar {
+    width: 100%;
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease-out 0.5s forwards;
+  }
+
+  .accuracy-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .accuracy-label {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .accuracy-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+
+  .accuracy-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .accuracy-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--success);
+    transition: width 0.8s ease, background 0.5s;
+    width: 0%;
+  }
+
+  .accuracy-fill.medium { background: var(--warning); }
+  .accuracy-fill.poor { background: var(--danger); }
+
+  /* Unit toggle */
+  .unit-toggle {
+    display: flex;
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 24px;
+    border: 1px solid rgba(255,255,255,0.04);
+    opacity: 0;
+    animation: fadeUp 0.7s ease-out 0.55s forwards;
+  }
+
+  .unit-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    padding: 8px 24px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+
+  .unit-btn.active {
+    background: var(--accent);
+    color: var(--bg-deep);
+    font-weight: 700;
+    box-shadow: 0 2px 12px var(--accent-glow);
+  }
+
+  /* Status */
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+    opacity: 0;
+    animation: fadeUp 0.7s ease-out 0.6s forwards;
+  }
+
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.3s;
+  }
+
+  .status-dot.active {
+    background: var(--success);
+    box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .status-dot.error {
+    background: var(--danger);
+  }
+
+  .status-text {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  /* Refresh button */
+  .refresh-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    opacity: 0;
+    animation: fadeUp 0.7s ease-out 0.65s forwards;
+  }
+
+  .refresh-btn:active {
+    transform: scale(0.92);
+    background: var(--accent-dim);
+  }
+
+  .refresh-btn svg {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .refresh-btn.spinning svg {
+    transform: rotate(360deg);
+  }
+
+  /* Initial state / loading */
+  .init-message {
+    text-align: center;
+    padding: 20px;
+  }
+
+  .init-message p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .init-btn {
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    padding: 14px 36px;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: var(--bg-deep);
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: 0 4px 20px var(--accent-glow);
+  }
+
+  .init-btn:active {
+    transform: scale(0.96);
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 2L2 22h20L12 2z"/>
+      <path d="M12 12v4"/>
+    </svg>
+    <h1>Altitude</h1>
+  </div>
+
+  <!-- Initial state -->
+  <div id="initState" class="init-message">
+    <p>This app uses your device GPS to show your current altitude above sea level.</p>
+    <button class="init-btn" onclick="startTracking()">Enable GPS</button>
+  </div>
+
+  <!-- Main display (hidden initially) -->
+  <div id="mainDisplay" class="hidden">
+
+    <div class="altitude-ring">
+      <svg class="ring-svg" viewBox="0 0 260 260">
+        <circle class="ring-bg" cx="130" cy="130" r="120"/>
+        <circle id="ringProgress" class="ring-progress" cx="130" cy="130" r="120"/>
+      </svg>
+      <div class="altitude-inner">
+        <div id="altValue" class="altitude-value">---</div>
+        <div id="altUnit" class="altitude-unit">metres</div>
+        <div class="altitude-label">above sea level</div>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          Session High
+        </div>
+        <div id="highValue" class="stat-value">---</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          Session Low
+        </div>
+        <div id="lowValue" class="stat-value">---</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          Speed
+        </div>
+        <div id="speedValue" class="stat-value">---</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4m-10-10h4m12 0h4"/></svg>
+          Coordinates
+        </div>
+        <div id="coordValue" class="stat-value" style="font-size:0.78rem;">---</div>
+      </div>
+    </div>
+
+    <div class="accuracy-bar">
+      <div class="accuracy-header">
+        <span class="accuracy-label">GPS Accuracy</span>
+        <span id="accValue" class="accuracy-value">---</span>
+      </div>
+      <div class="accuracy-track">
+        <div id="accFill" class="accuracy-fill"></div>
+      </div>
+    </div>
+
+    <div class="unit-toggle">
+      <button id="btnMetres" class="unit-btn active" onclick="setUnit('m')">Metres</button>
+      <button id="btnFeet" class="unit-btn" onclick="setUnit('ft')">Feet</button>
+    </div>
+
+    <div class="status">
+      <div id="statusDot" class="status-dot"></div>
+      <span id="statusText" class="status-text">Acquiring signal…</span>
+    </div>
+
+    <button id="refreshBtn" class="refresh-btn" onclick="refresh()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 4v6h-6"/>
+        <path d="M1 20v-6h6"/>
+        <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+      </svg>
+    </button>
+
+  </div>
+</div>
+
+<script>
+  let unit = 'm';
+  let watchId = null;
+  let sessionHigh = -Infinity;
+  let sessionLow = Infinity;
+  let lastAlt = null;
+
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 120; // ~753
+
+  function startTracking() {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    document.getElementById('initState').classList.add('hidden');
+    document.getElementById('mainDisplay').classList.remove('hidden');
+
+    watchId = navigator.geolocation.watchPosition(onPosition, onError, {
+      enableHighAccuracy: true,
+      maximumAge: 2000,
+      timeout: 15000
+    });
+  }
+
+  function onPosition(pos) {
+    const alt = pos.coords.altitude;
+    const acc = pos.coords.altitudeAccuracy;
+    const speed = pos.coords.speed;
+    const lat = pos.coords.latitude;
+    const lon = pos.coords.longitude;
+
+    // Status
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+
+    if (alt === null) {
+      dot.className = 'status-dot error';
+      txt.textContent = 'No altitude data (try outdoors)';
+      return;
+    }
+
+    dot.className = 'status-dot active';
+    txt.textContent = 'GPS locked · Live tracking';
+
+    lastAlt = alt;
+
+    // Track session extremes
+    if (alt > sessionHigh) sessionHigh = alt;
+    if (alt < sessionLow) sessionLow = alt;
+
+    updateDisplay(alt, acc, speed, lat, lon);
+  }
+
+  function onError(err) {
+    const dot = document.getElementById('statusDot');
+    const txt = document.getElementById('statusText');
+    dot.className = 'status-dot error';
+
+    if (err.code === 1) {
+      txt.textContent = 'Location permission denied';
+    } else if (err.code === 2) {
+      txt.textContent = 'Position unavailable';
+    } else {
+      txt.textContent = 'GPS timeout – retrying…';
+    }
+  }
+
+  function updateDisplay(alt, acc, speed, lat, lon) {
+    const displayAlt = unit === 'ft' ? alt * 3.28084 : alt;
+    const displayHigh = unit === 'ft' ? sessionHigh * 3.28084 : sessionHigh;
+    const displayLow = unit === 'ft' ? sessionLow * 3.28084 : sessionLow;
+    const unitLabel = unit === 'ft' ? 'ft' : 'm';
+
+    // Main value
+    document.getElementById('altValue').textContent = Math.round(displayAlt).toLocaleString();
+    document.getElementById('altUnit').textContent = unit === 'ft' ? 'feet' : 'metres';
+
+    // Ring progress (0–4000m range mapped to ring)
+    const maxAlt = 4000;
+    const ratio = Math.min(Math.max(alt / maxAlt, 0), 1);
+    const offset = RING_CIRCUMFERENCE * (1 - ratio);
+    document.getElementById('ringProgress').style.strokeDashoffset = offset;
+
+    // Stats
+    document.getElementById('highValue').textContent =
+      sessionHigh === -Infinity ? '---' : Math.round(displayHigh).toLocaleString() + ' ' + unitLabel;
+    document.getElementById('lowValue').textContent =
+      sessionLow === Infinity ? '---' : Math.round(displayLow).toLocaleString() + ' ' + unitLabel;
+
+    // Speed
+    if (speed !== null) {
+      const spd = unit === 'ft' ? speed * 2.23694 : speed * 3.6;
+      const spdUnit = unit === 'ft' ? ' mph' : ' km/h';
+      document.getElementById('speedValue').textContent = spd.toFixed(1) + spdUnit;
+    } else {
+      document.getElementById('speedValue').textContent = '---';
+    }
+
+    // Coordinates
+    document.getElementById('coordValue').textContent =
+      lat.toFixed(5) + ', ' + lon.toFixed(5);
+
+    // Accuracy
+    if (acc !== null) {
+      document.getElementById('accValue').textContent = '±' + Math.round(acc) + 'm';
+      const pct = Math.min(Math.max((1 - acc / 100) * 100, 5), 100);
+      const fill = document.getElementById('accFill');
+      fill.style.width = pct + '%';
+      fill.className = 'accuracy-fill' + (acc > 50 ? ' poor' : acc > 20 ? ' medium' : '');
+    }
+  }
+
+  function setUnit(u) {
+    unit = u;
+    document.getElementById('btnMetres').className = 'unit-btn' + (u === 'm' ? ' active' : '');
+    document.getElementById('btnFeet').className = 'unit-btn' + (u === 'ft' ? ' active' : '');
+
+    if (lastAlt !== null) {
+      // Re-render with new unit
+      const displayAlt = unit === 'ft' ? lastAlt * 3.28084 : lastAlt;
+      document.getElementById('altValue').textContent = Math.round(displayAlt).toLocaleString();
+      document.getElementById('altUnit').textContent = unit === 'ft' ? 'feet' : 'metres';
+
+      const unitLabel = unit === 'ft' ? 'ft' : 'm';
+      const displayHigh = unit === 'ft' ? sessionHigh * 3.28084 : sessionHigh;
+      const displayLow = unit === 'ft' ? sessionLow * 3.28084 : sessionLow;
+      document.getElementById('highValue').textContent =
+        sessionHigh === -Infinity ? '---' : Math.round(displayHigh).toLocaleString() + ' ' + unitLabel;
+      document.getElementById('lowValue').textContent =
+        sessionLow === Infinity ? '---' : Math.round(displayLow).toLocaleString() + ' ' + unitLabel;
+    }
+  }
+
+  function refresh() {
+    const btn = document.getElementById('refreshBtn');
+    btn.classList.add('spinning');
+    setTimeout(() => btn.classList.remove('spinning'), 600);
+
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);
+    }
+    sessionHigh = -Infinity;
+    sessionLow = Infinity;
+
+    watchId = navigator.geolocation.watchPosition(onPosition, onError, {
+      enableHighAccuracy: true,
+      maximumAge: 0,
+      timeout: 15000
+    });
+  }
+</script>
+
+</body>
+</html>
